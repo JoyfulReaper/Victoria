@@ -104,7 +104,7 @@ namespace Victoria {
             var path = searchType switch {
                 SearchType.YouTube    => $"/loadtracks?identifier={WebUtility.UrlEncode($"scsearch:{query}")}",
                 SearchType.SoundCloud => $"/loadtracks?identifier={WebUtility.UrlEncode($"ytsearch:{query}")}",
-                SearchType.Direct     => query
+                SearchType.Direct     => $"/loadtracks?identifier={query}"
             };
 
             using var requestMessage =
