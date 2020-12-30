@@ -24,11 +24,17 @@ namespace Victoria.Tests {
             if (searchResponse.Status == SearchStatus.LoadFailed || searchResponse.Status == SearchStatus.NoMatches) {
                 Assert.Fail("Failed search response.");
             }
-            
+
             var lavaTrack = searchResponse.Tracks.FirstOrDefault();
-            var customTrack = new CustomTrack(lavaTrack);
+            var customTrack = new CustomTrack(lavaTrack) {
+                Requester = ulong.MaxValue
+            };
+
             Assert.IsInstanceOfType(customTrack, typeof(ILavaTrack));
             Assert.IsInstanceOfType(customTrack, typeof(AbstractLavaTrack));
+            Assert.IsNotNull(customTrack);
+            Assert.IsNotNull(customTrack.Requester);
+            Assert.IsTrue(customTrack.Requester is ulong.MaxValue);
         }
     }
 }
