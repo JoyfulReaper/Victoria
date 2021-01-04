@@ -21,11 +21,6 @@
         /// <summary>
         /// 
         /// </summary>
-        Paused = 3,
-
-        /// <summary>
-        /// 
-        /// </summary>
-        Resumed = 4
+        Paused = 3
     }
 }
