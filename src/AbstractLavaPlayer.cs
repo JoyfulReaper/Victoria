@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Victoria.Enums;
 using Victoria.Interfaces;
+using Victoria.Payloads.Player;
 using Victoria.WebSocket;
+using Victoria.Wrappers;
+
+// ReSharper disable SuspiciousTypeConversion.Global
 
 namespace Victoria {
     /// <summary>
@@ -12,86 +16,181 @@ namespace Victoria {
     /// <typeparam name="TLavaTrack"></typeparam>
     public abstract class AbstractLavaPlayer<TLavaTrack> : ILavaPlayer<TLavaTrack> where TLavaTrack : ILavaTrack {
         /// <inheritdoc />
-        public TLavaTrack CurrentTrack { get; }
+        public TLavaTrack Track { get; private set; }
 
         /// <inheritdoc />
-        public int CurrentVolume { get; }
+        public int Volume { get; private set; }
 
         /// <inheritdoc />
         public DateTimeOffset LastUpdate { get; }
 
         /// <inheritdoc />
-        public PlayerState PlayerState { get; }
+        public PlayerState PlayerState { get; private set; }
 
         /// <inheritdoc />
-        public IReadOnlyCollection<object> Bands
-            => _bands.Values as IReadOnlyCollection<object>;
+        public VoiceChannel VoiceChannel { get; }
+
+        /// <inheritdoc />
+        public IReadOnlyCollection<EqualizerBand> Bands
+            => _bands.Values as IReadOnlyCollection<EqualizerBand>;
 
         /// <inheritdoc />
         public LavaQueue<TLavaTrack> Queue { get; }
 
-        private readonly IDictionary<int, object> _bands;
+        private readonly IDictionary<int, double> _bands;
         private readonly WebSocketClient _webSocketClient;
 
         /// <summary>
         /// 
         /// </summary>
-        protected AbstractLavaPlayer(WebSocketClient webSocketClient) {
+        protected AbstractLavaPlayer(WebSocketClient webSocketClient, VoiceChannel voiceChannel) {
             _webSocketClient = webSocketClient;
-            _bands = new Dictionary<int, object>(15);
+            VoiceChannel = voiceChannel;
+            Volume = 100;
+
+            _bands = new Dictionary<int, double>(15);
             Queue = new LavaQueue<TLavaTrack>();
         }
 
         /// <inheritdoc />
-        public async ValueTask PlayAsync(TLavaTrack lavaTrack) {
-            throw new NotImplementedException();
+        public ValueTask PlayAsync(TLavaTrack lavaTrack, bool noReplace = true, int volume = default,
+                                   bool shouldPause = false) {
+            Track = lavaTrack ?? throw new ArgumentNullException(nameof(lavaTrack));
+            PlayerState = shouldPause ? PlayerState.Paused : PlayerState.Playing;
+
+            return volume switch {
+                < 0 => throw new ArgumentOutOfRangeException(nameof(volume),
+                    "Volume must be greater than or equal to 0."),
+                > 1000 => throw new ArgumentOutOfRangeException(nameof(volume),
+                    "Volume must be less than or equal to 1000."),
+                _ => _webSocketClient.SendAsync(
+                    new PlayPayload(VoiceChannel.GuildId, lavaTrack.Hash, noReplace, Volume = volume, shouldPause))
+            };
         }
 
         /// <inheritdoc />
-        public async ValueTask PlayAsync(TLavaTrack lavaTrack, TimeSpan startTime, TimeSpan stopTime,
-                                         bool noReplace = false) {
-            throw new NotImplementedException();
+        public ValueTask PlayAsync(TLavaTrack lavaTrack, TimeSpan startTime, TimeSpan stopTime,
+                                   bool noReplace = false, int volume = default, bool shouldPause = false) {
+            if (startTime.TotalMilliseconds < 0) {
+                throw new ArgumentOutOfRangeException(nameof(startTime), "Value must be greater than 0.");
+            }
+
+            if (stopTime.TotalMilliseconds < 0) {
+                throw new ArgumentOutOfRangeException(nameof(stopTime), "Value must be greater than 0.");
+            }
+
+            if (stopTime <= startTime) {
+                throw new InvalidOperationException($"{nameof(stopTime)} must be greather than {nameof(startTime)}.");
+            }
+
+            Track = lavaTrack ?? throw new ArgumentNullException(nameof(lavaTrack));
+            PlayerState = shouldPause ? PlayerState.Paused : PlayerState.Playing;
+
+            return volume switch {
+                < 0 => throw new ArgumentOutOfRangeException(nameof(volume),
+                    "Volume must be greater than or equal to 0."),
+                > 1000 => throw new ArgumentOutOfRangeException(nameof(volume),
+                    "Volume must be less than or equal to 1000."),
+                _ => _webSocketClient.SendAsync(
+                    new PlayPayload(VoiceChannel.GuildId, lavaTrack.Hash, startTime, stopTime, noReplace,
+                        Volume = volume, shouldPause))
+            };
         }
 
         /// <inheritdoc />
-        public async ValueTask StopAsync() {
-            throw new NotImplementedException();
+        public ValueTask StopAsync() {
+            PlayerState = PlayerState.Stopped;
+            return _webSocketClient.SendAsync(new StopPayload(VoiceChannel.GuildId));
         }
 
         /// <inheritdoc />
-        public async ValueTask PauseAsync() {
-            throw new NotImplementedException();
+        public ValueTask PauseAsync() {
+            if (PlayerState == PlayerState.None) {
+                throw new InvalidOperationException("");
+            }
+
+            PlayerState = Track is null
+                ? PlayerState.Stopped
+                : PlayerState.Paused;
+
+            return _webSocketClient.SendAsync(new PausePayload(VoiceChannel.GuildId, true));
         }
 
         /// <inheritdoc />
-        public async ValueTask ResumeAsync() {
-            throw new NotImplementedException();
+        public ValueTask ResumeAsync() {
+            if (PlayerState == PlayerState.None) {
+                throw new InvalidOperationException("");
+            }
+
+            PlayerState = Track is null
+                ? PlayerState.Stopped
+                : PlayerState.Playing;
+
+            return _webSocketClient.SendAsync(new PausePayload(VoiceChannel.GuildId, false));
         }
 
         /// <inheritdoc />
-        public async ValueTask<(TLavaTrack Skipped, TLavaTrack Current)> SkipAsync(TimeSpan skipAfter = default) {
-            throw new NotImplementedException();
+        public async ValueTask<(TLavaTrack Skipped, TLavaTrack Current)> SkipAsync(TimeSpan? skipAfter = default) {
+            if (PlayerState == PlayerState.None) {
+                throw new InvalidOperationException("");
+            }
+
+            if (!Queue.TryDequeue(out var lavaTrack)) {
+                throw new InvalidOperationException("");
+            }
+
+            var skippedTrack = Track;
+            await await Task.Delay(skipAfter ?? TimeSpan.Zero)
+                .ContinueWith(_ => PlayAsync(lavaTrack, false));
+
+            return (skippedTrack, lavaTrack);
         }
 
         /// <inheritdoc />
-        public async ValueTask SeekAsync(TimeSpan seekPosition) {
-            throw new NotImplementedException();
+        public ValueTask SeekAsync(TimeSpan seekPosition) {
+            if (PlayerState == PlayerState.None) {
+                throw new InvalidOperationException("");
+            }
+
+            if (seekPosition.TotalMilliseconds > Track.Duration.TotalMilliseconds) {
+                throw new ArgumentOutOfRangeException(nameof(seekPosition), "");
+            }
+
+            return _webSocketClient.SendAsync(new SeekPayload(VoiceChannel.GuildId, seekPosition));
         }
 
         /// <inheritdoc />
-        public async ValueTask SetVolumeAsync(int volume) {
-            throw new NotImplementedException();
+        public ValueTask SetVolumeAsync(int volume) {
+            if (PlayerState == PlayerState.None) {
+                throw new InvalidOperationException("");
+            }
+
+            return volume switch {
+                < 0 => throw new ArgumentOutOfRangeException(nameof(volume),
+                    "Volume must be greater than or equal to 0."),
+                > 1000 => throw new ArgumentOutOfRangeException(nameof(volume),
+                    "Volume must be less than or equal to 1000."),
+                _ => _webSocketClient.SendAsync(new VolumePayload(VoiceChannel.GuildId, Volume = volume))
+            };
         }
 
         /// <inheritdoc />
-        public async ValueTask EqualizeAsync() {
-            throw new NotImplementedException();
+        public ValueTask EqualizeAsync(params EqualizerBand[] equalizerBands) {
+            if (PlayerState == PlayerState.None) {
+                throw new InvalidOperationException("");
+            }
+
+            foreach (var band in equalizerBands) {
+                _bands[band.Band] = band.Gain;
+            }
+
+            return _webSocketClient.SendAsync(new EqualizerPayload(VoiceChannel.GuildId, equalizerBands));
         }
 
         /// <inheritdoc />
         public async ValueTask DisposeAsync() {
             await StopAsync();
-            
+
             Queue.Clear();
             GC.SuppressFinalize(this);
         }
