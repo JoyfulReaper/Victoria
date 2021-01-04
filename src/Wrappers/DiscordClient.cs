@@ -19,11 +19,11 @@ namespace Victoria.Wrappers {
         /// <summary>
         /// 
         /// </summary>
-        public Func<VoiceServer, Task> OnVoiceServerUpdated;
+        public Func<VoiceServer, ValueTask> OnVoiceServerUpdated;
 
         /// <summary>
         /// 
         /// </summary>
-        public Func<VoiceState, Task> OnUserVoiceStateUpdated;
+        public Func<VoiceState, ValueTask> OnUserVoiceStateUpdated;
     }
 }
