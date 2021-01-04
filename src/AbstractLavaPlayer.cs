@@ -106,7 +106,8 @@ namespace Victoria {
         /// <inheritdoc />
         public ValueTask PauseAsync() {
             if (PlayerState == PlayerState.None) {
-                throw new InvalidOperationException("");
+                throw new InvalidOperationException(
+                    "Player's current state is set to None. Please make sure Player is connected to a voice channel.");
             }
 
             PlayerState = Track is null
@@ -119,7 +120,8 @@ namespace Victoria {
         /// <inheritdoc />
         public ValueTask ResumeAsync() {
             if (PlayerState == PlayerState.None) {
-                throw new InvalidOperationException("");
+                throw new InvalidOperationException(
+                    "Player's current state is set to None. Please make sure Player is connected to a voice channel.");
             }
 
             PlayerState = Track is null
@@ -132,11 +134,12 @@ namespace Victoria {
         /// <inheritdoc />
         public async ValueTask<(TLavaTrack Skipped, TLavaTrack Current)> SkipAsync(TimeSpan? skipAfter = default) {
             if (PlayerState == PlayerState.None) {
-                throw new InvalidOperationException("");
+                throw new InvalidOperationException(
+                    "Player's current state is set to None. Please make sure Player is connected to a voice channel.");
             }
 
             if (!Queue.TryDequeue(out var lavaTrack)) {
-                throw new InvalidOperationException("");
+                throw new InvalidOperationException("There aren't any more tracks in the queue.");
             }
 
             var skippedTrack = Track;
@@ -149,7 +152,8 @@ namespace Victoria {
         /// <inheritdoc />
         public ValueTask SeekAsync(TimeSpan seekPosition) {
             if (PlayerState == PlayerState.None) {
-                throw new InvalidOperationException("");
+                throw new InvalidOperationException(
+                    "Player's current state is set to None. Please make sure Player is connected to a voice channel.");
             }
 
             if (seekPosition.TotalMilliseconds > Track.Duration.TotalMilliseconds) {
@@ -161,10 +165,6 @@ namespace Victoria {
 
         /// <inheritdoc />
         public ValueTask SetVolumeAsync(int volume) {
-            if (PlayerState == PlayerState.None) {
-                throw new InvalidOperationException("");
-            }
-
             return volume switch {
                 < 0 => throw new ArgumentOutOfRangeException(nameof(volume),
                     "Volume must be greater than or equal to 0."),
@@ -176,10 +176,6 @@ namespace Victoria {
 
         /// <inheritdoc />
         public ValueTask EqualizeAsync(params EqualizerBand[] equalizerBands) {
-            if (PlayerState == PlayerState.None) {
-                throw new InvalidOperationException("");
-            }
-
             foreach (var band in equalizerBands) {
                 _bands[band.Band] = band.Gain;
             }
@@ -192,7 +188,6 @@ namespace Victoria {
             await StopAsync();
 
             Queue.Clear();
-            GC.SuppressFinalize(this);
         }
     }
 }
