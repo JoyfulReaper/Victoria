@@ -5,7 +5,7 @@ namespace Victoria.Wrappers {
     /// <summary>
     /// 
     /// </summary>
-    public struct DiscordClientWrapper {
+    public sealed record DiscordClientWrapper {
         /// <summary>
         /// 
         /// </summary>
