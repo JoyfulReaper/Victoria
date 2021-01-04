@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Victoria.Responses.Search;
+using Victoria.Wrappers;
 
 namespace Victoria.Interfaces {
     /// <inheritdoc />
@@ -43,13 +44,13 @@ namespace Victoria.Interfaces {
         /// 
         /// </summary>
         /// <returns></returns>
-        ValueTask JoinAsync();
+        ValueTask<TLavaPlayer> JoinAsync(VoiceChannel voiceChannel);
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        ValueTask LeaveAsync();
+        ValueTask LeaveAsync(VoiceChannel voiceChannel);
 
         /// <summary>
         /// 
