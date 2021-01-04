@@ -44,6 +44,11 @@ namespace Victoria {
             return GetEnumerator();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
+        /// <exception cref="ArgumentNullException"></exception>
         public void Enqueue(T value) {
             if (value == null) {
                 throw new ArgumentNullException(nameof(value));
@@ -54,6 +59,11 @@ namespace Victoria {
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
         public bool TryDequeue(out T value) {
             lock (_list) {
                 if (_list.Count < 1) {
@@ -79,6 +89,11 @@ namespace Victoria {
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
         public bool TryPeek(out T value) {
             lock (_list) {
                 if (_list.First == null) {
@@ -91,6 +106,11 @@ namespace Victoria {
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
+        /// <exception cref="ArgumentNullException"></exception>
         public void Remove(T value) {
             if (value == null) {
                 throw new ArgumentNullException(nameof(value));
@@ -101,12 +121,18 @@ namespace Victoria {
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public void Clear() {
             lock (_list) {
                 _list.Clear();
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public void Shuffle() {
             lock (_list) {
                 if (_list.Count < 2) {
@@ -132,6 +158,12 @@ namespace Victoria {
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public T RemoveAt(int index) {
             lock (_list) {
                 var currentNode = _list.First;
@@ -154,6 +186,13 @@ namespace Victoria {
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="count"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
         public ICollection<T> RemoveRange(int index, int count) {
             if (index < 0) {
                 throw new ArgumentOutOfRangeException(nameof(index));
