@@ -55,6 +55,7 @@ namespace Victoria {
         private readonly NodeConfiguration _nodeConfiguration;
         private readonly WebSocketClient _webSocketClient;
         private readonly ConcurrentDictionary<ulong, TLavaPlayer> _players;
+        private readonly ConcurrentDictionary<ulong, VoiceState> _voiceStates;
 
         /// <summary>
         /// 
@@ -64,6 +65,7 @@ namespace Victoria {
 
             _webSocketClient = new WebSocketClient(nodeConfiguration.Hostname, nodeConfiguration.Port, "ws");
             _players = new ConcurrentDictionary<ulong, TLavaPlayer>();
+            _voiceStates = new ConcurrentDictionary<ulong, VoiceState>();
 
             _webSocketClient.OnOpenAsync += OnOpenAsync;
             _webSocketClient.OnCloseAsync += OnCloseAsync;
@@ -165,12 +167,25 @@ namespace Victoria {
             await DisconnectAsync();
         }
 
-        private Task OnUserVoiceStateUpdated(VoiceState arg) {
-            throw new NotImplementedException();
+        private ValueTask OnUserVoiceStateUpdated(VoiceState state) {
+            if (DiscordClient.UserId != state.UserId) {
+                return ValueTask.CompletedTask;
+            }
+
+            _voiceStates.TryUpdate(state.GuildId, state, default);
+            return ValueTask.CompletedTask;
         }
 
-        private Task OnVoiceServerUpdated(VoiceServer arg) {
-            throw new NotImplementedException();
+        private ValueTask OnVoiceServerUpdated(VoiceServer server) {
+            if (_voiceStates.TryGetValue(server.GuildId, out var state))
+                return _webSocketClient.SendAsync(new ServerUpdatePayload {
+                    Data = new VoiceServerData(server.Token, server.Endpoint),
+                    SessionId = state.SessionId,
+                    GuildId = $"{server.GuildId}"
+                });
+
+            _voiceStates.TryAdd(server.GuildId, default);
+            return ValueTask.CompletedTask;
         }
 
         private ValueTask OnOpenAsync() {
