@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Victoria.Enums;
+using Victoria.Payloads.Player;
+using Victoria.Wrappers;
 
 namespace Victoria.Interfaces {
     /// <inheritdoc />
@@ -15,12 +17,12 @@ namespace Victoria.Interfaces {
         /// <summary>
         /// 
         /// </summary>
-        TLavaTrack CurrentTrack { get; }
+        TLavaTrack Track { get; }
 
         /// <summary>
         /// 
         /// </summary>
-        int CurrentVolume { get; }
+        int Volume { get; }
 
         /// <summary>
         /// 
@@ -35,8 +37,13 @@ namespace Victoria.Interfaces {
         /// <summary>
         /// 
         /// </summary>
-        IReadOnlyCollection<object> Bands { get; }
-        
+        VoiceChannel VoiceChannel { get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        IReadOnlyCollection<EqualizerBand> Bands { get; }
+
         /// <summary>
         /// 
         /// </summary>
@@ -46,10 +53,14 @@ namespace Victoria.Interfaces {
         /// 
         /// </summary>
         /// <param name="lavaTrack"></param>
+        /// <param name="noReplace"></param>
+        /// <param name="volume"></param>
+        /// <param name="shouldPause"></param>
         /// <exception cref="ArgumentNullException">Throws when <paramref name="lavaTrack"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Throws when start or end time are out of range.</exception>
-        /// <exception cref="InvalidOperationException">Throws when star time is bigger than end time.</exception>
-        ValueTask PlayAsync(TLavaTrack lavaTrack);
+        /// <exception cref="ArgumentOutOfRangeException">Throws when <paramref name="volume"/> is less than 0.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Throws when <paramref name="volume"/> is greater than 1000.</exception>
+        ValueTask PlayAsync(TLavaTrack lavaTrack, bool noReplace = true, int volume = default,
+                            bool shouldPause = false);
 
         /// <summary>
         /// 
@@ -58,11 +69,16 @@ namespace Victoria.Interfaces {
         /// <param name="startTime"></param>
         /// <param name="stopTime"></param>
         /// <param name="noReplace"></param>
+        /// <param name="volume"></param>
+        /// <param name="shouldPause"></param>
         /// <exception cref="ArgumentNullException">Throws when <paramref name="lavaTrack"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Throws when <paramref name="startTime"/> is less than <paramref name="lavaTrack"/> start time.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Throws when <paramref name="stopTime"/> is greater than <paramref name="lavaTrack"/> end time.</exception>
         /// <exception cref="InvalidOperationException">Throws when star time is bigger than end time.</exception>
-        ValueTask PlayAsync(TLavaTrack lavaTrack, TimeSpan startTime, TimeSpan stopTime, bool noReplace = false);
+        /// <exception cref="ArgumentOutOfRangeException">Throws when <paramref name="volume"/> is less than 0.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Throws when <paramref name="volume"/> is greater than 1000.</exception>
+        ValueTask PlayAsync(TLavaTrack lavaTrack, TimeSpan startTime, TimeSpan stopTime, bool noReplace = true,
+                            int volume = default, bool shouldPause = false);
 
         /// <summary>
         /// 
@@ -87,7 +103,7 @@ namespace Victoria.Interfaces {
         /// <param name="skipAfter"></param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException">Throws when <see cref="PlayerState"/> is invalid.</exception>
-        ValueTask<(TLavaTrack Skipped, TLavaTrack Current)> SkipAsync(TimeSpan skipAfter = default);
+        ValueTask<(TLavaTrack Skipped, TLavaTrack Current)> SkipAsync(TimeSpan? skipAfter = default);
 
         /// <summary>
         /// 
@@ -101,12 +117,14 @@ namespace Victoria.Interfaces {
         /// 
         /// </summary>
         /// <param name="volume"></param>
+        /// <exception cref="ArgumentOutOfRangeException">Throws when <paramref name="volume"/> is less than 0.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Throws when <paramref name="volume"/> is greater than 1000.</exception>
         ValueTask SetVolumeAsync(int volume);
 
         /// <summary>
         /// 
         /// </summary>
         /// <exception cref="InvalidOperationException">Throws when <see cref="PlayerState"/> is invalid.</exception>
-        ValueTask EqualizeAsync();
+        ValueTask EqualizeAsync(params EqualizerBand[] equalizerBands);
     }
 }
