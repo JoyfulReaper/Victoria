@@ -7,26 +7,29 @@ using System.Threading.Tasks;
 using Victoria.WebSocket.EventArgs;
 
 namespace Victoria.WebSocket {
+    /// <summary>
+    /// 
+    /// </summary>
     public sealed class WebSocketClient : IAsyncDisposable {
         /// <summary>
         /// 
         /// </summary>
-        public event Func<Task> OnOpenAsync;
+        public event Func<ValueTask> OnOpenAsync;
 
         /// <summary>
         /// 
         /// </summary>
-        public event Func<CloseEventArgs, Task> OnCloseAsync;
+        public event Func<CloseEventArgs, ValueTask> OnCloseAsync;
 
         /// <summary>
         /// 
         /// </summary>
-        public event Func<ErrorEventArgs, Task> OnErrorAsync;
+        public event Func<ErrorEventArgs, ValueTask> OnErrorAsync;
 
         /// <summary>
         /// 
         /// </summary>
-        public event Func<MessageEventArgs, Task> OnMessageAsync;
+        public event Func<MessageEventArgs, ValueTask> OnMessageAsync;
 
         /// <summary>
         /// 
@@ -88,7 +91,7 @@ namespace Victoria.WebSocket {
                     IsConnected = true;
 
                     _connectionTokenSource = new CancellationTokenSource();
-                    await Task.WhenAll(OnOpenAsync.Invoke(), ReceiveAsync(), SendAsync());
+                    await Task.WhenAll(OnOpenAsync.Invoke().AsTask(), ReceiveAsync(), SendAsync());
                 });
         }
 
