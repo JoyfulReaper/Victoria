@@ -6,8 +6,10 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Victoria.Interfaces;
+using Victoria.Payloads;
 using Victoria.Responses.Search;
 using Victoria.WebSocket;
+using Victoria.WebSocket.EventArgs;
 using Victoria.Wrappers;
 
 namespace Victoria {
@@ -44,9 +46,13 @@ namespace Victoria {
         public IReadOnlyCollection<TLavaPlayer> Players
             => _players.Values as IReadOnlyCollection<TLavaPlayer>;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        protected DiscordClient DiscordClient { get; set; }
+
         private bool _isConnected;
         private readonly NodeConfiguration _nodeConfiguration;
-        private readonly DiscordClientWrapper _discordClientWrapper;
         private readonly WebSocketClient _webSocketClient;
         private readonly ConcurrentDictionary<ulong, TLavaPlayer> _players;
 
@@ -55,10 +61,17 @@ namespace Victoria {
         /// </summary>
         public AbstractLavaNode(NodeConfiguration nodeConfiguration) {
             _nodeConfiguration = nodeConfiguration;
-            _discordClientWrapper = nodeConfiguration.DiscordClient;
 
             _webSocketClient = new WebSocketClient(nodeConfiguration.Hostname, nodeConfiguration.Port, "ws");
             _players = new ConcurrentDictionary<ulong, TLavaPlayer>();
+
+            _webSocketClient.OnOpenAsync += OnOpenAsync;
+            _webSocketClient.OnCloseAsync += OnCloseAsync;
+            _webSocketClient.OnErrorAsync += OnErrorAsync;
+            _webSocketClient.OnMessageAsync += OnMessageAsync;
+
+            DiscordClient.OnVoiceServerUpdated = OnVoiceServerUpdated;
+            DiscordClient.OnUserVoiceStateUpdated = OnUserVoiceStateUpdated;
         }
 
         /// <inheritdoc />
@@ -81,13 +94,28 @@ namespace Victoria {
         }
 
         /// <inheritdoc />
-        public async ValueTask JoinAsync() {
-            throw new System.NotImplementedException();
+        public async ValueTask<TLavaPlayer> JoinAsync(VoiceChannel voiceChannel) {
+            if (_players.TryGetValue(voiceChannel.GuildId, out var player)) {
+                return player;
+            }
+
+            player = (TLavaPlayer) Activator.CreateInstance(typeof(TLavaPlayer), _webSocketClient, voiceChannel);
+            _players.TryAdd(voiceChannel.GuildId, player);
+
+            return player;
         }
 
         /// <inheritdoc />
-        public async ValueTask LeaveAsync() {
-            throw new System.NotImplementedException();
+        public async ValueTask LeaveAsync(VoiceChannel voiceChannel) {
+            if (!Volatile.Read(ref _isConnected)) {
+                throw new InvalidOperationException("Cannot execute this action when no connection is established");
+            }
+
+            if (!_players.TryRemove(voiceChannel.GuildId, out var player)) {
+                return;
+            }
+
+            await player.DisposeAsync();
         }
 
         /// <inheritdoc />
@@ -130,7 +158,43 @@ namespace Victoria {
 
         /// <inheritdoc />
         public async ValueTask DisposeAsync() {
-            throw new System.NotImplementedException();
+            foreach (var (_, player) in _players) {
+                await player.DisposeAsync();
+            }
+
+            await DisconnectAsync();
+        }
+
+        private Task OnUserVoiceStateUpdated(VoiceState arg) {
+            throw new NotImplementedException();
+        }
+
+        private Task OnVoiceServerUpdated(VoiceServer arg) {
+            throw new NotImplementedException();
+        }
+
+        private ValueTask OnOpenAsync() {
+            Volatile.Write(ref _isConnected, true);
+            if (!_nodeConfiguration.EnableResume) {
+                return ValueTask.CompletedTask;
+            }
+
+            return _webSocketClient.SendAsync(
+                new ResumePayload(_nodeConfiguration.ResumeKey, _nodeConfiguration.ResumeTimeout));
+        }
+
+        private ValueTask OnCloseAsync(CloseEventArgs arg) {
+            throw new NotImplementedException();
+        }
+
+        private ValueTask OnErrorAsync(ErrorEventArgs arg) {
+            throw new NotImplementedException();
+        }
+
+        private async ValueTask OnMessageAsync(MessageEventArgs arg) {
+            if (arg.Data.Length == 0) {
+                return;
+            }
         }
     }
 }
