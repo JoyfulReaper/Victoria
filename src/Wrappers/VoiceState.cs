@@ -1,24 +1,21 @@
-﻿using System;
-using System.Threading.Tasks;
-
 namespace Victoria.Wrappers {
     /// <summary>
     /// 
     /// </summary>
-    public sealed record DiscordClientWrapper {
+    public struct VoiceState {
         /// <summary>
         /// 
         /// </summary>
-        public int Shards { get; }
+        public ulong UserId { get; init; }
         
         /// <summary>
         /// 
         /// </summary>
-        public ulong UserId { get; }
-
+        public string OldSessionId { get; init; }
+        
         /// <summary>
         /// 
         /// </summary>
-        public event Func<VoiceServerWrapper, Task> OnVoiceServerUpdated;
+        public string CurrentSessionId { get; init; }
     }
 }

@@ -2,7 +2,7 @@ namespace Victoria.Wrappers {
     /// <summary>
     /// 
     /// </summary>
-    public sealed record VoiceChannel {
+    public struct VoiceChannel {
         /// <summary>
         /// 
         /// </summary>
