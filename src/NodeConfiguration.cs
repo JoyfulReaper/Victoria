@@ -4,31 +4,31 @@ namespace Victoria {
     /// <summary>
     /// 
     /// </summary>
-    public class NodeConfiguration {
+    public record NodeConfiguration {
         /// <summary>
         /// 
         /// </summary>
-        public DiscordClientWrapper DiscordClient { get; set; }
+        public DiscordClientWrapper DiscordClient { get; init; }
 
         /// <summary>
         /// 
         /// </summary>
-        public string Hostname { get; set; } = "127.0.0.1";
+        public string Hostname { get; init; } = "127.0.0.1";
 
         /// <summary>
         /// 
         /// </summary>
-        public int Port { get; set; } = 2333;
+        public int Port { get; init; } = 2333;
 
         /// <summary>
         /// 
         /// </summary>
-        public bool IsSecure { get; set; } = false;
+        public bool IsSecure { get; init; } = false;
 
         /// <summary>
         /// 
         /// </summary>
-        public string Authorization { get; set; } = "youshallnotpass";
+        public string Authorization { get; init; } = "youshallnotpass";
 
         internal string SocketEndpoint
             => (IsSecure ? "wss" : "ws") + Endpoint;
