@@ -8,8 +8,8 @@ namespace Victoria {
     /// 
     /// </summary>
     public static class Extensions {
-        internal static readonly Random Random = new Random();
-        internal static readonly HttpClient HttpClient = new HttpClient();
+        internal static readonly Random Random = new();
+        internal static readonly HttpClient HttpClient = new();
 
         /// <summary>
         /// 
