@@ -1,15 +1,10 @@
-﻿using Victoria.Wrappers;
+﻿using System;
 
 namespace Victoria {
     /// <summary>
     /// 
     /// </summary>
     public record NodeConfiguration {
-        /// <summary>
-        /// 
-        /// </summary>
-        public DiscordClientWrapper DiscordClient { get; init; }
-
         /// <summary>
         /// 
         /// </summary>
@@ -24,6 +19,21 @@ namespace Victoria {
         /// 
         /// </summary>
         public bool IsSecure { get; init; } = false;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public bool EnableResume { get; init; } = true;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string ResumeKey { get; init; } = "Victoria";
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public TimeSpan ResumeTimeout { get; init; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
         /// 
