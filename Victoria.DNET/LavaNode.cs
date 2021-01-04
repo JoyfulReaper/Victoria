@@ -30,16 +30,17 @@ namespace Victoria.DNET {
                 GuildId = voiceServer.Guild.Id,
                 Endpoint = voiceServer.Endpoint,
                 Token = voiceServer.Token
-            });
+            }).AsTask();
         }
 
         private Task OnUserVoiceStateUpdated(SocketUser user, SocketVoiceState oldState,
                                              SocketVoiceState currentState) {
             return DiscordClient.OnUserVoiceStateUpdated.Invoke(new VoiceState {
                 UserId = user.Id,
-                OldSessionId = oldState.VoiceSessionId,
-                CurrentSessionId = currentState.VoiceSessionId
-            });
+                SessionId = currentState.VoiceSessionId ?? oldState.VoiceSessionId,
+                GuildId = (currentState.VoiceChannel ?? oldState.VoiceChannel).Guild.Id,
+                ChannelId = (currentState.VoiceChannel ?? oldState.VoiceChannel).Id
+            }).AsTask();
         }
     }
 }
