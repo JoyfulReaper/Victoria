@@ -19,4 +19,8 @@
 	<ItemGroup>
 		<None Include="icon.png" Pack="true" Visible="false" PackagePath="" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Payloads\Events" />
+	</ItemGroup>
 </Project>
