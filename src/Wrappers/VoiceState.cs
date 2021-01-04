@@ -7,15 +7,20 @@ namespace Victoria.Wrappers {
         /// 
         /// </summary>
         public ulong UserId { get; init; }
-        
+
         /// <summary>
         /// 
         /// </summary>
-        public string OldSessionId { get; init; }
-        
+        public ulong ChannelId { get; init; }
+
         /// <summary>
         /// 
         /// </summary>
-        public string CurrentSessionId { get; init; }
+        public ulong GuildId { get; init; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string SessionId { get; init; }
     }
 }
