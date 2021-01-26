@@ -44,24 +44,6 @@ namespace Victoria.Interfaces {
         /// 
         /// </summary>
         /// <returns></returns>
-        ValueTask<TLavaPlayer> JoinAsync(VoiceChannel voiceChannel);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        ValueTask LeaveAsync(VoiceChannel voiceChannel);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        ValueTask MoveAsync();
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
         ValueTask<SearchResponse> SearchAsync(SearchType searchType, string query);
 
         /// <summary>

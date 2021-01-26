@@ -37,7 +37,7 @@ namespace Victoria.Interfaces {
         /// <summary>
         /// 
         /// </summary>
-        VoiceChannel VoiceChannel { get; }
+        ulong VoiceChannelId { get; }
 
         /// <summary>
         /// 
