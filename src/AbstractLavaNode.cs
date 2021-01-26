@@ -3,8 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Victoria.Interfaces;
 using Victoria.Payloads;
 using Victoria.Responses.Search;
@@ -18,16 +20,18 @@ namespace Victoria {
     /// </summary>
     public class AbstractLavaNode : AbstractLavaNode<ILavaPlayer>, ILavaNode {
         /// <inheritdoc />
-        public AbstractLavaNode(NodeConfiguration nodeConfiguration)
-            : base(nodeConfiguration) { }
+        public AbstractLavaNode(NodeConfiguration nodeConfiguration, ILogger<ILavaNode> logger)
+            : base(nodeConfiguration, logger) {
+            
+        }
     }
 
     /// <inheritdoc />
     public class AbstractLavaNode<TLavaPlayer> : AbstractLavaNode<TLavaPlayer, ILavaTrack>
         where TLavaPlayer : ILavaPlayer<ILavaTrack> {
         /// <inheritdoc />
-        public AbstractLavaNode(NodeConfiguration nodeConfiguration)
-            : base(nodeConfiguration) { }
+        public AbstractLavaNode(NodeConfiguration nodeConfiguration, ILogger<ILavaNode> logger)
+            : base(nodeConfiguration, logger) { }
     }
 
     /// <summary>
@@ -40,37 +44,50 @@ namespace Victoria {
         where TLavaTrack : ILavaTrack {
         /// <inheritdoc />
         public bool IsConnected
-            => Volatile.Read(ref _isConnected);
+            => Volatile.Read(ref IsConnectedRef);
 
         /// <inheritdoc />
         public IReadOnlyCollection<TLavaPlayer> Players
-            => _players.Values as IReadOnlyCollection<TLavaPlayer>;
+            => PlayersCache.Values as IReadOnlyCollection<TLavaPlayer>;
 
         /// <summary>
         /// 
         /// </summary>
-        protected DiscordClient DiscordClient { get; set; }
+        protected DiscordClient DiscordClient { get; init; }
 
-        private bool _isConnected;
+        /// <summary>
+        /// 
+        /// </summary>
+        protected readonly ConcurrentDictionary<ulong, TLavaPlayer> PlayersCache;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected bool IsConnectedRef;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected readonly WebSocketClient WebSocketClient;
+
+        private readonly ILogger _logger;
         private readonly NodeConfiguration _nodeConfiguration;
-        private readonly WebSocketClient _webSocketClient;
-        private readonly ConcurrentDictionary<ulong, TLavaPlayer> _players;
         private readonly ConcurrentDictionary<ulong, VoiceState> _voiceStates;
 
         /// <summary>
         /// 
         /// </summary>
-        public AbstractLavaNode(NodeConfiguration nodeConfiguration) {
+        public AbstractLavaNode(NodeConfiguration nodeConfiguration, ILogger<ILavaNode> logger) {
             _nodeConfiguration = nodeConfiguration;
-
-            _webSocketClient = new WebSocketClient(nodeConfiguration.Hostname, nodeConfiguration.Port, "ws");
-            _players = new ConcurrentDictionary<ulong, TLavaPlayer>();
+            _logger = logger;
+            WebSocketClient = new WebSocketClient(nodeConfiguration.Hostname, nodeConfiguration.Port, "ws");
+            PlayersCache = new ConcurrentDictionary<ulong, TLavaPlayer>();
             _voiceStates = new ConcurrentDictionary<ulong, VoiceState>();
 
-            _webSocketClient.OnOpenAsync += OnOpenAsync;
-            _webSocketClient.OnCloseAsync += OnCloseAsync;
-            _webSocketClient.OnErrorAsync += OnErrorAsync;
-            _webSocketClient.OnMessageAsync += OnMessageAsync;
+            WebSocketClient.OnOpenAsync += OnOpenAsync;
+            WebSocketClient.OnCloseAsync += OnCloseAsync;
+            WebSocketClient.OnErrorAsync += OnErrorAsync;
+            WebSocketClient.OnMessageAsync += OnMessageAsync;
 
             DiscordClient.OnVoiceServerUpdated = OnVoiceServerUpdated;
             DiscordClient.OnUserVoiceStateUpdated = OnUserVoiceStateUpdated;
@@ -78,51 +95,21 @@ namespace Victoria {
 
         /// <inheritdoc />
         public async ValueTask ConnectAsync() {
-            if (Volatile.Read(ref _isConnected)) {
+            if (Volatile.Read(ref IsConnectedRef)) {
                 throw new InvalidOperationException(
                     $"A connection is already established. Please call {nameof(DisconnectAsync)} before calling {nameof(ConnectAsync)}.");
             }
 
-            await _webSocketClient.ConnectAsync();
+            await WebSocketClient.ConnectAsync();
         }
 
         /// <inheritdoc />
         public async ValueTask DisconnectAsync() {
-            if (!Volatile.Read(ref _isConnected)) {
+            if (!Volatile.Read(ref IsConnectedRef)) {
                 throw new InvalidOperationException("Cannot disconnect when no connection is established.");
             }
 
-            await _webSocketClient.DisconnectAsync();
-        }
-
-        /// <inheritdoc />
-        public async ValueTask<TLavaPlayer> JoinAsync(VoiceChannel voiceChannel) {
-            if (_players.TryGetValue(voiceChannel.GuildId, out var player)) {
-                return player;
-            }
-
-            player = (TLavaPlayer) Activator.CreateInstance(typeof(TLavaPlayer), _webSocketClient, voiceChannel);
-            _players.TryAdd(voiceChannel.GuildId, player);
-
-            return player;
-        }
-
-        /// <inheritdoc />
-        public async ValueTask LeaveAsync(VoiceChannel voiceChannel) {
-            if (!Volatile.Read(ref _isConnected)) {
-                throw new InvalidOperationException("Cannot execute this action when no connection is established");
-            }
-
-            if (!_players.TryRemove(voiceChannel.GuildId, out var player)) {
-                return;
-            }
-
-            await player.DisposeAsync();
-        }
-
-        /// <inheritdoc />
-        public async ValueTask MoveAsync() {
-            throw new System.NotImplementedException();
+            await WebSocketClient.DisconnectAsync();
         }
 
         /// <inheritdoc />
@@ -149,18 +136,18 @@ namespace Victoria {
         }
 
         /// <inheritdoc />
-        public bool HasPlayer(ulong guildId) {
-            return _players.ContainsKey(guildId);
+        public bool HasPlayer(ulong voiceChannelId) {
+            return PlayersCache.ContainsKey(voiceChannelId);
         }
 
         /// <inheritdoc />
-        public bool TryGetPlayer(ulong guildId, out TLavaPlayer lavaPlayer) {
-            return _players.TryGetValue(guildId, out lavaPlayer);
+        public bool TryGetPlayer(ulong voiceChannelId, out TLavaPlayer lavaPlayer) {
+            return PlayersCache.TryGetValue(voiceChannelId, out lavaPlayer);
         }
 
         /// <inheritdoc />
         public async ValueTask DisposeAsync() {
-            foreach (var (_, player) in _players) {
+            foreach (var (_, player) in PlayersCache) {
                 await player.DisposeAsync();
             }
 
@@ -168,6 +155,7 @@ namespace Victoria {
         }
 
         private ValueTask OnUserVoiceStateUpdated(VoiceState state) {
+            _logger.LogDebug($"Received {state.GuildId} user voice state update.");
             if (DiscordClient.UserId != state.UserId) {
                 return ValueTask.CompletedTask;
             }
@@ -177,8 +165,9 @@ namespace Victoria {
         }
 
         private ValueTask OnVoiceServerUpdated(VoiceServer server) {
+            _logger.LogDebug($"Received {server.GuildId} voice server update.");
             if (_voiceStates.TryGetValue(server.GuildId, out var state))
-                return _webSocketClient.SendAsync(new ServerUpdatePayload {
+                return WebSocketClient.SendAsync(new ServerUpdatePayload {
                     Data = new VoiceServerData(server.Token, server.Endpoint),
                     SessionId = state.SessionId,
                     GuildId = $"{server.GuildId}"
@@ -189,27 +178,34 @@ namespace Victoria {
         }
 
         private ValueTask OnOpenAsync() {
-            Volatile.Write(ref _isConnected, true);
+            Volatile.Write(ref IsConnectedRef, true);
+            _logger.LogInformation("Connection to Lavalink established.");
             if (!_nodeConfiguration.EnableResume) {
                 return ValueTask.CompletedTask;
             }
 
-            return _webSocketClient.SendAsync(
+            return WebSocketClient.SendAsync(
                 new ResumePayload(_nodeConfiguration.ResumeKey, _nodeConfiguration.ResumeTimeout));
         }
 
         private ValueTask OnCloseAsync(CloseEventArgs arg) {
-            throw new NotImplementedException();
+            _logger.LogWarning("WebSocket connection was closed.");
+            return ValueTask.CompletedTask;
         }
 
         private ValueTask OnErrorAsync(ErrorEventArgs arg) {
-            throw new NotImplementedException();
+            _logger.LogCritical(arg.Exception, arg.Message);
+            return ValueTask.CompletedTask;
         }
 
         private async ValueTask OnMessageAsync(MessageEventArgs arg) {
             if (arg.Data.Length == 0) {
+                _logger.LogWarning("Received empty data from WebSocket.");
                 return;
             }
+            
+            _logger.LogDebug(Encoding.UTF8.GetString(arg.Data));
+            
         }
     }
 }
