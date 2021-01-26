@@ -5,7 +5,6 @@ using Victoria.Enums;
 using Victoria.Interfaces;
 using Victoria.Payloads.Player;
 using Victoria.WebSocket;
-using Victoria.Wrappers;
 
 // ReSharper disable SuspiciousTypeConversion.Global
 
@@ -28,7 +27,7 @@ namespace Victoria {
         public PlayerState PlayerState { get; private set; }
 
         /// <inheritdoc />
-        public VoiceChannel VoiceChannel { get; }
+        public ulong VoiceChannelId { get; init; }
 
         /// <inheritdoc />
         public IReadOnlyCollection<EqualizerBand> Bands
@@ -43,9 +42,9 @@ namespace Victoria {
         /// <summary>
         /// 
         /// </summary>
-        protected AbstractLavaPlayer(WebSocketClient webSocketClient, VoiceChannel voiceChannel) {
+        protected AbstractLavaPlayer(WebSocketClient webSocketClient, ulong voiceChannelId) {
             _webSocketClient = webSocketClient;
-            VoiceChannel = voiceChannel;
+            VoiceChannelId = voiceChannelId;
             Volume = 100;
 
             _bands = new Dictionary<int, double>(15);
@@ -64,7 +63,7 @@ namespace Victoria {
                 > 1000 => throw new ArgumentOutOfRangeException(nameof(volume),
                     "Volume must be less than or equal to 1000."),
                 _ => _webSocketClient.SendAsync(
-                    new PlayPayload(VoiceChannel.GuildId, lavaTrack.Hash, noReplace, Volume = volume, shouldPause))
+                    new PlayPayload(VoiceChannelId, lavaTrack.Hash, noReplace, Volume = volume, shouldPause))
             };
         }
 
@@ -92,7 +91,7 @@ namespace Victoria {
                 > 1000 => throw new ArgumentOutOfRangeException(nameof(volume),
                     "Volume must be less than or equal to 1000."),
                 _ => _webSocketClient.SendAsync(
-                    new PlayPayload(VoiceChannel.GuildId, lavaTrack.Hash, startTime, stopTime, noReplace,
+                    new PlayPayload(VoiceChannelId, lavaTrack.Hash, startTime, stopTime, noReplace,
                         Volume = volume, shouldPause))
             };
         }
@@ -100,7 +99,7 @@ namespace Victoria {
         /// <inheritdoc />
         public ValueTask StopAsync() {
             PlayerState = PlayerState.Stopped;
-            return _webSocketClient.SendAsync(new StopPayload(VoiceChannel.GuildId));
+            return _webSocketClient.SendAsync(new StopPayload(VoiceChannelId));
         }
 
         /// <inheritdoc />
@@ -114,7 +113,7 @@ namespace Victoria {
                 ? PlayerState.Stopped
                 : PlayerState.Paused;
 
-            return _webSocketClient.SendAsync(new PausePayload(VoiceChannel.GuildId, true));
+            return _webSocketClient.SendAsync(new PausePayload(VoiceChannelId, true));
         }
 
         /// <inheritdoc />
@@ -128,7 +127,7 @@ namespace Victoria {
                 ? PlayerState.Stopped
                 : PlayerState.Playing;
 
-            return _webSocketClient.SendAsync(new PausePayload(VoiceChannel.GuildId, false));
+            return _webSocketClient.SendAsync(new PausePayload(VoiceChannelId, false));
         }
 
         /// <inheritdoc />
@@ -160,7 +159,7 @@ namespace Victoria {
                 throw new ArgumentOutOfRangeException(nameof(seekPosition), "");
             }
 
-            return _webSocketClient.SendAsync(new SeekPayload(VoiceChannel.GuildId, seekPosition));
+            return _webSocketClient.SendAsync(new SeekPayload(VoiceChannelId, seekPosition));
         }
 
         /// <inheritdoc />
@@ -170,7 +169,7 @@ namespace Victoria {
                     "Volume must be greater than or equal to 0."),
                 > 1000 => throw new ArgumentOutOfRangeException(nameof(volume),
                     "Volume must be less than or equal to 1000."),
-                _ => _webSocketClient.SendAsync(new VolumePayload(VoiceChannel.GuildId, Volume = volume))
+                _ => _webSocketClient.SendAsync(new VolumePayload(VoiceChannelId, Volume = volume))
             };
         }
 
@@ -180,7 +179,7 @@ namespace Victoria {
                 _bands[band.Band] = band.Gain;
             }
 
-            return _webSocketClient.SendAsync(new EqualizerPayload(VoiceChannel.GuildId, equalizerBands));
+            return _webSocketClient.SendAsync(new EqualizerPayload(VoiceChannelId, equalizerBands));
         }
 
         /// <inheritdoc />
