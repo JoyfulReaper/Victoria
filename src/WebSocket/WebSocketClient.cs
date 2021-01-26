@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Victoria.WebSocket.EventArgs;
 
 namespace Victoria.WebSocket {
+    using System.Net.WebSockets;
     /// <summary>
     /// 
     /// </summary>
@@ -41,7 +41,7 @@ namespace Victoria.WebSocket {
         /// </summary>
         public Uri Host { get; }
 
-        private readonly System.Net.WebSockets.WebSocket _webSocket;
+        private readonly WebSocket _webSocket;
         private readonly ConcurrentQueue<byte[]> _messageQueue;
         private CancellationTokenSource _connectionTokenSource;
 
