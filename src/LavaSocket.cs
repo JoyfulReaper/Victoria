@@ -113,8 +113,11 @@ namespace Victoria {
         /// </summary>
         /// <returns></returns>
         public async Task DisconnectAsync() {
-            await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Requested.", _tokenSource.Token)
-                .ConfigureAwait(false);
+            if (_socket.State == WebSocketState.Open)
+            {
+                await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Requested.", _tokenSource.Token)
+                    .ConfigureAwait(false);
+            }
         }
 
         private async Task VerifyConnectionAsync(Task task) {
