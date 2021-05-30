@@ -146,7 +146,7 @@ namespace Victoria {
 
 		/// <inheritdoc />
 		public async ValueTask DisposeAsync() {
-			if (!IsConnected)
+			if (IsConnected)
 			{
 				await DisconnectAsync()
 				   .ConfigureAwait(false);
