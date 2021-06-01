@@ -1,3 +1,6 @@
+I created this fork to solve an issue I was having when using Victoria 5.1.11. This should solve the issue where "Can't disconnect when client isn't connected." exception is thrown when LavaNode is Disposed.
+=============================
+
 <p align="center">
 	<img src="https://i.imgur.com/OibdkEz.png" />
 	</br>
