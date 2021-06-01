@@ -146,7 +146,7 @@ namespace Victoria {
 
 		/// <inheritdoc />
 		public async ValueTask DisposeAsync() {
-			if (IsConnected)
+			if (Volatile.Read(ref _refConnected))
 			{
 				await DisconnectAsync()
 				   .ConfigureAwait(false);
